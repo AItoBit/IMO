@@ -1,98 +1,86 @@
 import Mathlib
 
+open Real
+
 /--
-Formalization of IMO 1969 Problem 1.
-Prove that there are infinitely many natural numbers a with the following property:
-the number z = n^4 + a is not prime for any natural number n.
-
-We model "infinitely many" by showing that for any arbitrary bound `m`, 
-there exists an `a ≥ m` satisfying the property.
+Formalization of the algebraic simplification step in the solution:
+Simplifying the quotient of the expressions for c to obtain r/q = tan(A/2)tan(B/2).
+Here we represent tA = tan(A/2) and tB = tan(B/2).
+The expression cot(A/2) + cot(B/2) translates algebraically to tA⁻¹ + tB⁻¹.
 -/
-theorem imo1969_p1 (m : ℕ) : ∃ a ≥ m, ∀ n : ℕ, ¬ Nat.Prime (n^4 + a) := by
-  -- We choose k such that 4k^4 >= m and k > 1.
-  -- Picking k = m + 2 safely guarantees both bounds robustly.
-  let k := m + 2
-  have hk : 1 < k := by
-    dsimp [k]
-    omega
-    
-  let a_val := 4 * k^4
-  use a_val
+lemma imo1970_p1_ratio (r q c tA tB : ℝ)
+    (htA_ne : tA ≠ 0) (htB_ne : tB ≠ 0) (hq_ne : q ≠ 0) (h_sum_ne : tA + tB ≠ 0)
+    (hr_eq : r * (tA⁻¹ + tB⁻¹) = c)
+    (hq_eq : q * (tA + tB) = c) :
+    r / q = tA * tB := by
   
-  constructor
-  · -- Prove a_val ≥ m
-    have h_expand : 4 * (m + 2)^4 = 4 * m^4 + 32 * m^3 + 96 * m^2 + 128 * m + 64 := by ring
-    dsimp [a_val, k]
-    rw [h_expand]
-    omega
+  -- Relate the sum of inverses to the sum of the variables
+  have h1 : (tA⁻¹ + tB⁻¹) * (tA * tB) = tA + tB := by
+    calc (tA⁻¹ + tB⁻¹) * (tA * tB)
+      _ = tA⁻¹ * (tA * tB) + tB⁻¹ * (tB * tA) := by ring
+      _ = (tA⁻¹ * tA) * tB + (tB⁻¹ * tB) * tA := by ring
+      _ = 1 * tB + 1 * tA := by rw [inv_mul_cancel₀ htA_ne, inv_mul_cancel₀ htB_ne]
+      _ = tA + tB := by ring
+
+  -- Equate the expressions for c
+  have eq_c : r * (tA⁻¹ + tB⁻¹) = q * (tA + tB) := by rw [hr_eq, hq_eq]
+  
+  -- Multiply both sides by (tA * tB)
+  have step2 : r * (tA⁻¹ + tB⁻¹) * (tA * tB) = q * (tA + tB) * (tA * tB) := by 
+    rw [eq_c]
     
-  · -- Prove n^4 + a_val is never prime for any n
-    intro n
-    -- Base inequality to handle natural number subtraction safely
-    have h_le : 2 * n * k ≤ n^2 + 2 * k^2 := by
-      zify
-      have h_sq : 0 ≤ ((n : ℤ) - k)^2 := sq_nonneg _
-      have h_eq : (n : ℤ)^2 + 2*(k : ℤ)^2 - 2*(n : ℤ)*(k : ℤ) = ((n : ℤ) - k)^2 + (k : ℤ)^2 := by ring
-      have hk2 : 0 ≤ (k : ℤ)^2 := sq_nonneg _
-      linarith
-
-    -- The factors u and v corresponding to Sophie Germain's Identity
-    let u := n^2 + 2*k^2 - 2*n*k
-    let v := n^2 + 2*k^2 + 2*n*k
-
-    -- Connect u and v to integers for unconstrained ring simplification
-    have hu_z : (u : ℤ) = (n : ℤ)^2 + 2*(k : ℤ)^2 - 2*(n : ℤ)*(k : ℤ) := by
-      change ((n^2 + 2*k^2 - 2*n*k : ℕ) : ℤ) = _
-      rw [Nat.cast_sub h_le]
-      push_cast
-      rfl
-
-    have hv_z : (v : ℤ) = (n : ℤ)^2 + 2*(k : ℤ)^2 + 2*(n : ℤ)*(k : ℤ) := by
-      change ((n^2 + 2*k^2 + 2*n*k : ℕ) : ℤ) = _
-      push_cast
-      rfl
-
-    -- Prove that both factors are strictly greater than 1
-    have hu_gt : 1 < u := by
-      have : (1 : ℤ) < u := by
-        rw [hu_z]
-        have h_eq : (n : ℤ)^2 + 2*(k : ℤ)^2 - 2*(n : ℤ)*(k : ℤ) = ((n : ℤ) - k)^2 + (k : ℤ)^2 := by ring
-        rw [h_eq]
-        have h1 : 0 ≤ ((n : ℤ) - k)^2 := sq_nonneg _
-        have h2 : 1 < (k : ℤ)^2 := by
-          have h_k_gt_1 : 1 < (k : ℤ) := by exact_mod_cast hk
-          nlinarith
-        linarith
-      exact_mod_cast this
-
-    have hv_gt : 1 < v := by
-      have : (1 : ℤ) < v := by
-        rw [hv_z]
-        have h_eq : (n : ℤ)^2 + 2*(k : ℤ)^2 + 2*(n : ℤ)*(k : ℤ) = ((n : ℤ) + k)^2 + (k : ℤ)^2 := by ring
-        rw [h_eq]
-        have h1 : 0 ≤ ((n : ℤ) + k)^2 := sq_nonneg _
-        have h2 : 1 < (k : ℤ)^2 := by
-          have h_k_gt_1 : 1 < (k : ℤ) := by exact_mod_cast hk
-          nlinarith
-        linarith
-      exact_mod_cast this
-
-    -- Factorize the main polynomial 
-    have huv_eq : n^4 + a_val = u * v := by
-      have : (n^4 + a_val : ℤ) = (u : ℤ) * (v : ℤ) := by
-        rw [hu_z, hv_z]
-        dsimp [a_val]
-        ring
-      exact_mod_cast this
-
-    -- Conclude that it cannot be prime since it splits into factors > 1
-    rw [huv_eq]
-    intro hp
-    have hdvd : u ∣ u * v := dvd_mul_right u v
-    have h_eq_or := Nat.Prime.eq_one_or_self_of_dvd hp u hdvd
+  have hLHS : r * (tA⁻¹ + tB⁻¹) * (tA * tB) = r * (tA + tB) := by
+    calc r * (tA⁻¹ + tB⁻¹) * (tA * tB)
+      _ = r * ((tA⁻¹ + tB⁻¹) * (tA * tB)) := by ring
+      _ = r * (tA + tB) := by rw [h1]
+      
+  rw [hLHS] at step2
+  
+  -- Clear (tA + tB) by multiplying by its inverse
+  have step3 : r * (tA + tB) * (tA + tB)⁻¹ = q * (tA + tB) * (tA * tB) * (tA + tB)⁻¹ := by 
+    rw [step2]
     
-    cases h_eq_or with
-    | inl h1 => linarith
-    | inr h2 =>
-      have h_lt : u < u * v := by nlinarith
-      linarith
+  have h_cancel : (tA + tB) * (tA + tB)⁻¹ = 1 := mul_inv_cancel₀ h_sum_ne
+  
+  have hLHS2 : r * (tA + tB) * (tA + tB)⁻¹ = r := by
+    calc r * (tA + tB) * (tA + tB)⁻¹
+      _ = r * ((tA + tB) * (tA + tB)⁻¹) := by ring
+      _ = r * 1 := by rw [h_cancel]
+      _ = r := by ring
+      
+  have hRHS2 : q * (tA + tB) * (tA * tB) * (tA + tB)⁻¹ = q * (tA * tB) := by
+    calc q * (tA + tB) * (tA * tB) * (tA + tB)⁻¹
+      _ = q * (tA * tB) * ((tA + tB) * (tA + tB)⁻¹) := by ring
+      _ = q * (tA * tB) * 1 := by rw [h_cancel]
+      _ = q * (tA * tB) := by ring
+      
+  rw [hLHS2, hRHS2] at step3
+  
+  -- Conclude the target ratio
+  calc r / q
+    _ = r * q⁻¹ := rfl
+    _ = (q * (tA * tB)) * q⁻¹ := by rw [step3]
+    _ = tA * tB * (q * q⁻¹) := by ring
+    _ = tA * tB * 1 := by rw [mul_inv_cancel₀ hq_ne]
+    _ = tA * tB := by ring
+
+
+/--
+Formalization of the main deductive chain of IMO 1970 Problem 1.
+Using the established ratio identities for the three triangles (ABC, AMC, BMC), 
+we compute the product of the ratios and reduce via the supplementary angles condition.
+tM and tM' represent tan(AMC/2) and tan(CMB/2).
+-/
+theorem imo1970_p1_solution (r q r1 q1 r2 q2 tA tB tM tM' : ℝ)
+    (h_rq  : r / q = tA * tB)
+    (h_r1q1 : r1 / q1 = tA * tM)
+    (h_r2q2 : r2 / q2 = tB * tM')
+    -- The supplementary angles condition implies their half-angle tangents multiply to 1
+    (h_supp : tM * tM' = 1) :
+    (r1 / q1) * (r2 / q2) = r / q := by
+  calc (r1 / q1) * (r2 / q2)
+    _ = (tA * tM) * (tB * tM') := by rw [h_r1q1, h_r2q2]
+    _ = (tA * tB) * (tM * tM') := by ring
+    _ = (tA * tB) * 1 := by rw [h_supp]
+    _ = tA * tB := by ring
+    _ = r / q := h_rq.symm
