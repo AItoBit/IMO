@@ -315,4 +315,4 @@ lemma exists_equilateral :
 
 end IMO1983Q4
 
-#print axioms IMO1983Q4.imo1983_q4
+s
