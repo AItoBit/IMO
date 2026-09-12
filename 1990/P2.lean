@@ -99,10 +99,10 @@ lemma answer_eq (n : ℕ) (hn : 3 ≤ n) : answer n = (2 * n - 1 - gcd3 n) / 2 +
       intro h
       have := (three_dvd_iff n).2 h
       omega
-    rw [if_neg h3, hg]
+    rw [ite_eq_right h3, hg]
     omega
   · have h3 : (3 ∣ 2 * n - 1) := (three_dvd_iff n).1 hg
-    rw [if_pos h3, hg]
+    rw [ite_eq_left h3, hg]
     rw [hg, ht] at hm
     omega
 
@@ -116,7 +116,8 @@ lemma cyclen_dvd_of_dvd_three_mul (n : ℕ) (k : ℤ)
       unfold gcd3 at hg; exact hg
     have : IsCoprime ((2 * n - 1 : ℕ) : ℤ) ((3 : ℕ) : ℤ) := by
       rw [Int.isCoprime_iff_gcd_eq_one]
-      simpa [Int.gcd_natCast_natCast] using hcop
+      rw [Int.gcd_natCast_natCast]
+      exact hcop
     rw [hmc]
     refine this.dvd_of_dvd_mul_left ?_
     simpa [mul_comm] using h
@@ -138,7 +139,7 @@ lemma val_step (n : ℕ) (hn : 3 ≤ n) [NeZero (2 * n - 1)] : (step n).val = n 
 
 lemma good_iff (n : ℕ) (hn : 3 ≤ n) (S : Finset (ZMod (2 * n - 1))) :
     IsGood n S ↔ ∃ x ∈ S, x + step n ∈ S := by
-  haveI : NeZero (2 * n - 1) := ⟨by omega⟩
+  have : NeZero (2 * n - 1) := ⟨by omega⟩
   constructor
   · rintro ⟨x, hx, y, hy, hne, h | h⟩
     · have hv : (y - x).val = n + 1 := by
@@ -201,11 +202,11 @@ lemma fiber_card (n : ℕ) (hn : 3 ≤ n) [NeZero (2 * n - 1)] (r : ℕ) (hr : r
     (fun x => x.val / gcd3 n) ?_ ?_ ?_ ?_
   · intro i hi
     simp only [Finset.coe_range, Set.mem_Iio] at hi
-    simp only [Finset.coe_filter, Set.mem_setOf_eq, Finset.mem_univ, true_and]
+    simp only [Finset.coe_filter, Set.mem_ofPred_eq, Finset.mem_univ, true_and]
     rw [ZMod.val_cast_of_lt (key i hi)]
     simp [Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hr]
   · intro x hx
-    simp only [Finset.coe_filter, Set.mem_setOf_eq, Finset.mem_univ, true_and] at hx
+    simp only [Finset.coe_filter, Set.mem_ofPred_eq, Finset.mem_univ, true_and] at hx
     simp only [Finset.coe_range, Set.mem_Iio]
     have hv : x.val < gcd3 n * cyclen n := by rw [← hm]; exact ZMod.val_lt x
     exact Nat.div_lt_of_lt_mul hv
@@ -215,7 +216,7 @@ lemma fiber_card (n : ℕ) (hn : 3 ≤ n) [NeZero (2 * n - 1)] (r : ℕ) (hr : r
     rw [ZMod.val_cast_of_lt (key i hi), Nat.add_mul_div_left _ _ hg, Nat.div_eq_of_lt hr]
     omega
   · intro x hx
-    simp only [Finset.coe_filter, Set.mem_setOf_eq, Finset.mem_univ, true_and] at hx
+    simp only [Finset.coe_filter, Set.mem_ofPred_eq, Finset.mem_univ, true_and] at hx
     show (((r + gcd3 n * (x.val / gcd3 n) : ℕ) : ZMod (2 * n - 1))) = x
     have h : r + gcd3 n * (x.val / gcd3 n) = x.val := by
       rw [← hx]; exact Nat.mod_add_div _ _
@@ -259,7 +260,7 @@ lemma bad_fiber_card (n : ℕ) (hn : 3 ≤ n) [NeZero (2 * n - 1)] (S : Finset (
 lemma bad_card_le (n : ℕ) (hn : 3 ≤ n) (S : Finset (ZMod (2 * n - 1)))
     (hS : ∀ x ∈ S, x + step n ∉ S) : 2 * S.card ≤ 2 * n - 1 - gcd3 n := by
   classical
-  haveI : NeZero (2 * n - 1) := ⟨by omega⟩
+  have : NeZero (2 * n - 1) := ⟨by omega⟩
   have hg : 0 < gcd3 n := gcd3_pos n
   have hpart : S.card = ∑ r ∈ Finset.range (gcd3 n), ({x ∈ S | x.val % gcd3 n = r}).card :=
     Finset.card_eq_sum_card_fiberwise (fun x _ => Finset.mem_range.2 (Nat.mod_lt _ hg))
@@ -393,13 +394,13 @@ theorem imo1990_p2 (n : ℕ) (hn : 3 ≤ n) :
   · intro S hS
     by_contra hbad
     rw [good_iff n hn] at hbad
-    push_neg at hbad
+    push Not at hbad
     have hle := bad_card_le n hn S hbad
     rw [hS, answer_eq n hn] at hle
     omega
   · intro k hk
     by_contra hlt
-    push_neg at hlt
+    push Not at hlt
     rw [answer_eq n hn] at hlt
     have hcard := badSet_card n hn
     have hle : k ≤ (badSet n).card := by rw [hcard]; omega
