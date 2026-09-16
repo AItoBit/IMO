@@ -268,24 +268,28 @@ theorem core (n : ℕ) : ∀ N : ℕ, ∀ R : Finset (ℕ × ℕ), R.card ≤ N 
       set R' := R.erase (p, q) with hR'def
       have hmemR' : ∀ k, ((p, k) ∈ R' ↔ k < q) := by
         intro k
-        rw [hR'def, mem_erase, hmemR k, Prod.mk.injEq]
+        rw [hR'def, mem_erase, hmemR k]
         constructor
         · rintro ⟨h1, h2⟩
-          rcases Nat.lt_or_ge k q with h | h
-          · exact h
-          · exact absurd ⟨rfl, by omega⟩ h1
-        · intro h
-          exact ⟨fun hc => by omega, by omega⟩
+          rcases Nat.lt_or_ge k q with hlt | hge
+          · exact hlt
+          · exact absurd (congrArg (fun t => ((p, t) : ℕ × ℕ)) (le_antisymm h2 hge)) h1
+        · intro hlt
+          refine ⟨fun hc => ?_, by omega⟩
+          have hkq : k = q := congrArg Prod.snd hc
+          omega
       have hmemR'r : ∀ h, ((h, q) ∈ R' ↔ h < p) := by
         intro h
-        rw [hR'def, mem_erase, hmemRr h, Prod.mk.injEq]
+        rw [hR'def, mem_erase, hmemRr h]
         constructor
         · rintro ⟨h1, h2⟩
-          rcases Nat.lt_or_ge h p with hh | hh
-          · exact hh
-          · exact absurd ⟨by omega, rfl⟩ h1
-        · intro hh
-          exact ⟨fun hc => by omega, by omega⟩
+          rcases Nat.lt_or_ge h p with hlt | hge
+          · exact hlt
+          · exact absurd (congrArg (fun t => ((t, q) : ℕ × ℕ)) (le_antisymm h2 hge)) h1
+        · intro hlt
+          refine ⟨fun hc => ?_, by omega⟩
+          have hhp : h = p := congrArg Prod.fst hc
+          omega
       -- the inductive hypothesis applies to `R'`
       have hR'card : R'.card ≤ N := by
         rw [hR'def, card_erase_of_mem hcR]
@@ -297,7 +301,7 @@ theorem core (n : ℕ) : ∀ N : ℕ, ∀ R : Finset (ℕ × ℕ), R.card ≤ N 
         have hne2 : x ≠ (p, q) := (mem_erase.1 hx).1
         refine mem_erase.2 ⟨?_, hdown x hxR a b ha hb⟩
         intro hab
-        rw [Prod.mk.injEq] at hab
+        simp only [Prod.mk.injEq] at hab
         apply hne2
         have h2 : x.1 + x.2 ≤ p + q := hcmax x hxR
         exact Prod.ext (by omega) (by omega)
@@ -316,7 +320,6 @@ theorem core (n : ℕ) : ∀ N : ℕ, ∀ R : Finset (ℕ × ℕ), R.card ≤ N 
           rw [mem_colB, mem_Ico, hmemR' k]
           omega
         rw [e, Nat.card_Ico]
-        omega
       have hrowRq : (rowB n R q).card = n - p - q - 1 := by
         have e : rowB n R q = Ico (p + 1) (n - q) := by
           ext h
@@ -335,25 +338,23 @@ theorem core (n : ℕ) : ∀ N : ℕ, ∀ R : Finset (ℕ × ℕ), R.card ≤ N 
       have hcolEq : ∀ h ∈ (range n).erase p, (colB n R' h).card = (colB n R h).card := by
         intro h hh
         have hhp : h ≠ p := (mem_erase.1 hh).1
+        have key : ∀ k, ((h, k) ∈ R' ↔ (h, k) ∈ R) := by
+          intro k
+          rw [hR'def, mem_erase]
+          exact ⟨fun x => x.2, fun x => ⟨fun hc => hhp (congrArg Prod.fst hc), x⟩⟩
         congr 1
         ext k
-        rw [mem_colB, mem_colB, hR'def, mem_erase, Prod.mk.injEq]
-        constructor
-        · rintro ⟨h1, h2⟩
-          exact ⟨h1, fun hc => h2 ⟨hhp, hc⟩⟩
-        · rintro ⟨h1, h2⟩
-          exact ⟨h1, fun hc => h2 hc.2⟩
+        rw [mem_colB, mem_colB, key k]
       have hrowEq : ∀ k ∈ (range n).erase q, (rowB n R' k).card = (rowB n R k).card := by
         intro k hk
         have hkq : k ≠ q := (mem_erase.1 hk).1
+        have key : ∀ h, ((h, k) ∈ R' ↔ (h, k) ∈ R) := by
+          intro h
+          rw [hR'def, mem_erase]
+          exact ⟨fun x => x.2, fun x => ⟨fun hc => hkq (congrArg Prod.snd hc), x⟩⟩
         congr 1
         ext h
-        rw [mem_rowB, mem_rowB, hR'def, mem_erase, Prod.mk.injEq]
-        constructor
-        · rintro ⟨h1, h2⟩
-          exact ⟨h1, fun hc => h2 ⟨hkq, hc⟩⟩
-        · rintro ⟨h1, h2⟩
-          exact ⟨h1, fun hc => h2 hc.2⟩
+        rw [mem_rowB, mem_rowB, key h]
       -- cancel the common factor
       have hP : ∏ h ∈ (range n).erase p, (colB n R' h).card
           = ∏ h ∈ (range n).erase p, (colB n R h).card := Finset.prod_congr rfl hcolEq
